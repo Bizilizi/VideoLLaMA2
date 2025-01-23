@@ -1,11 +1,52 @@
 #!/bin/bash
+#SBATCH --job-name="VideoLLaMA-2-8gpu"
+#SBATCH --nodes=2
+#SBATCH --cpus-per-task=24
+#SBATCH --gres=gpu:4
+#SBATCH --partition=DEADLINE
+#SBATCH --comment="ICCV Rebuttal"
+#SBATCH --mem=128G
+#SBATCH --time=10:00:00
+#SBATCH --mail-type=ALL
+#SBATCH --output=/storage/slurm/zverev/logs/videollama2/8gpu/slurm-%j.out
+#SBATCH --error=/storage/slurm/zverev/logs/videollama2/8gpu/slurm-%j.out
+#SBATCH --nodelist=node3,node20,node19
+
+source activate videollama2av
+set -x
+
+mkdir -p /storage/local/zverev
+mkdir -p /tmp/vggsound
+
+# copy the squashfs file to the local storage
+rsync -av --progress --ignore-existing /home/wiss/zverev/datasets/vggsound.squashfs /storage/local/zverev/vggsound.squashfs
+
+# mount the squashfs file
+squashfuse /storage/local/zverev/vggsound.squashfs /tmp/vggsound
+
+# cd to the main dir
+cd ../..
 
 # Environment Variables
-ARG_WORLD_SIZE=${1:-1}
-ARG_NPROC_PER_NODE=${2:-8}
-ARG_MASTER_ADDR="127.0.0.1"
-ARG_MASTER_PORT=16666
-ARG_RANK=${3:-0}
+ARG_WORLD_SIZE=${SLURM_NNODES:-${1:-1}}
+
+
+if [ "$ARG_WORLD_SIZE" -gt 1 ]; then
+    master_addr=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+    ARG_MASTER_ADDR=$master_addr
+    ARG_NPROC_PER_NODE=${SLURM_GPUS_PER_NODE:-${1:-4}}
+else
+    ARG_MASTER_ADDR="127.0.0.1"
+    ARG_NPROC_PER_NODE=${SLURM_GPUS:-${1:-4}}
+fi
+
+ARG_MASTER_PORT=$((10000 + RANDOM % 20000))
+ARG_RANK=${SLURM_NODEID:-${3:-0}}
+
+echo "NODELIST="${SLURM_NODELIST}
+echo "ARG_MASTER_ADDR=$ARG_MASTER_ADDR"
+echo "ARG_MASTER_PORT=$ARG_MASTER_PORT"
+echo "ARG_RANK=$ARG_RANK"
 
 # Multiple conditions
 if [ ! -n "$WORLD_SIZE" ] || [ ! -n "$NPROC_PER_NODE" ]; then
@@ -23,14 +64,14 @@ echo "NPROC_PER_NODE: $NPROC_PER_NODE"
 
 # Training Arguments
 GLOBAL_BATCH_SIZE=128
-LOCAL_BATCH_SIZE=4
+LOCAL_BATCH_SIZE=1
 GRADIENT_ACCUMULATION_STEPS=$[$GLOBAL_BATCH_SIZE/($WORLD_SIZE*$NPROC_PER_NODE*$LOCAL_BATCH_SIZE)]
 
 # Log Arguments
-export TRANSFORMERS_OFFLINE=1
 export WANDB_PROJECT=videollama2qwen2_downstream_sft
+
 RUN_NAME=siglip_tcv35_7b_16f_lora
-DATA_DIR=datasets
+DATA_DIR=/tmp/vggsound/
 OUTP_DIR=work_dirs
 
 torchrun --nnodes $WORLD_SIZE \
@@ -46,8 +87,8 @@ torchrun --nnodes $WORLD_SIZE \
     --vision_tower google/siglip-so400m-patch14-384 \
     --mm_projector_type stc_connector_v35 \
     --pretrain_mm_mlp_adapter DAMO-NLP-SG/VideoLLaMA2.1-7B-16F-Base/mm_projector.bin \
-    --data_path   ${DATA_DIR}/videollava_sft/videochatgpt_llavaimage_tune.json \
-    --data_folder ${DATA_DIR}/videollava_sft/ \
+    --data_path   datasets/vggsound/vggsound_train.json \
+    --data_folder ${DATA_DIR} \
     --mm_vision_select_layer -2 \
     --image_aspect_ratio pad \
     --num_frames 16 \
@@ -69,6 +110,6 @@ torchrun --nnodes $WORLD_SIZE \
     --logging_steps 1 \
     --model_max_length 2048 \
     --gradient_checkpointing True \
-    --dataloader_num_workers 4 \
+    --dataloader_num_workers 24 \
     --report_to tensorboard \
     --run_name $RUN_NAME \

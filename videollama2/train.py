@@ -43,6 +43,7 @@ from videollama2.videollama2_trainer import (VideoLLaMA2Trainer,
     find_all_linear_names, safe_save_model_for_hf_trainer
 )
 
+
 # NOTE: fast tokenizer warning issue: https://github.com/huggingface/transformers/issues/5486   
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 
@@ -422,7 +423,7 @@ def train(attn_implementation=None):
             )
         ))
 
-    config = VLLMConfigs[model_args.model_type].from_pretrained(model_args.model_path, trust_remote_code=True)
+    config = VLLMConfigs[model_args.model_type].from_pretrained(model_args.model_path, trust_remote_code=True, cache_dir="./cache")
     config._attn_implementation = attn_implementation
 
     if model_args.vision_tower is not None:
@@ -431,6 +432,7 @@ def train(attn_implementation=None):
             config=config,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
             do_sample=True,
+            cache_dir="./cache",
             **bnb_model_from_pretrained_args
         )
         if 'mixtral' in model_args.model_type:
@@ -442,6 +444,7 @@ def train(attn_implementation=None):
             config=config,
             torch_dtype=(torch.bfloat16 if training_args.bf16 else None),
             do_sample=True,
+            cache_dir="./cache",
             **bnb_model_from_pretrained_args
         )
     model.config.use_cache = False
@@ -486,6 +489,7 @@ def train(attn_implementation=None):
         model_max_length=training_args.model_max_length,
         padding_side="right",
         use_fast=True,
+        cache_dir="./cache",
     )
 
     if tokenizer.pad_token is None:

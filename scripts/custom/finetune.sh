@@ -18,6 +18,7 @@ if [ ! -n "$MASTER_ADDR" ] || [ ! -n "$MASTER_PORT" ] || [ ! -n "$RANK" ]; then
     RANK=$ARG_RANK
 fi
 
+echo "NODELIST="${SLURM_NODELIST}
 echo "WORLD_SIZE: $WORLD_SIZE"
 echo "NPROC_PER_NODE: $NPROC_PER_NODE"
 

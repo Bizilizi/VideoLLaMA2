@@ -4,6 +4,10 @@ __pycache__
 *.egg-info
 dist
 
+logs/
+datasets/
+cache/
+
 # Log
 *.log
 *.log.*
@@ -56,3 +60,4 @@ work_dirs*/
 pretrained/
 publish_models/
 public_models/
+logs
