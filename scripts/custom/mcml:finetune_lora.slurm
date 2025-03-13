@@ -5,7 +5,7 @@
 #SBATCH --gres=gpu:4
 #SBATCH --partition=mcml-hgx-a100-80x4
 #SBATCH --comment="ICCV"
-#SBATCH --mem=24G
+#SBATCH --mem=128G
 #SBATCH --time=12:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=zverev@in.tum.de
