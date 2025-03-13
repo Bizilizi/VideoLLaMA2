@@ -1,5 +1,6 @@
 """
 Run this script once to pre-load the models into the cache.
+It will download the models and store them in the cache directory.
 """
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
