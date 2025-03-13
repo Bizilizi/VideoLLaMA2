@@ -2,7 +2,7 @@
 #SBATCH --job-name="Video LLaMA"
 #SBATCH --nodes=2
 #SBATCH --cpus-per-task=8
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:2
 #SBATCH --partition=mcml-hgx-a100-80x4
 #SBATCH --comment="ICCV"
 #SBATCH --mem=128G
@@ -23,14 +23,8 @@ echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX "
 source activate videollama2av
 set -x
 
-mkdir -p /storage/local/zverev
-mkdir -p /tmp/vggsound
-
 # copy the squashfs file to the local storage
 # rsync -av --progress --ignore-existing /dss/mcmlscratch/00/ge96lam3/vggsound.squashfs /storage/local/zverev/vggsound.squashfs
-
-# mount the squashfs file
-squashfuse /dss/mcmlscratch/00/ge96lam3/vggsound.squashfs /tmp/vggsound
 
 # cd to the main dir
 cd ../..
@@ -80,18 +74,19 @@ DATA_DIR=/tmp/vggsound/
 OUTP_DIR=work_dirs
 
 # same goes for `\$(hostname -s|tr -dc '0-9')` - we want it to interpolate at `srun` time
-LAUNCHER="torchrun --nnodes $WORLD_SIZE \
-    --nproc_per_node $NPROC_PER_NODE \
-    --node_rank \$SLURM_NODEID \
-    --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT \
-    --rdzv_backend c10d \
-    --max_restarts 0 \
-    --role \$(hostname -s|tr -dc '0-9'): \
-    --tee 3 \
-    "
+CMD="
+mkdir -p /storage/local/zverev
+mkdir -p /tmp/vggsound
 
-# EDIT the path+name of the python script and whatever args it needs
-PROGRAM="videollama2/train.py \
+# mount the squashfs file
+squashfuse /dss/mcmlscratch/00/ge96lam3/vggsound.squashfs /tmp/vggsound
+
+torchrun --nnodes $WORLD_SIZE \
+    --nproc_per_node $NPROC_PER_NODE \
+    --master_addr=$MASTER_ADDR \
+    --master_port=$MASTER_PORT \
+    --node_rank \$SLURM_NODEID \
+    videollama2/train.py \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --deepspeed scripts/zero3.json \
     --model_type videollama2_qwen2 \
@@ -126,9 +121,6 @@ PROGRAM="videollama2/train.py \
     --report_to tensorboard \
     --run_name $RUN_NAME \
     "
-
-export CMD="$LAUNCHER $PROGRAM"
-echo $CMD
 
 # srun error handling:
 # --wait=60: wait 60 sec after the first task terminates before terminating all remaining tasks
