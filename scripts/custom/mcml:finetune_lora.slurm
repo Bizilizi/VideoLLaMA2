@@ -11,6 +11,7 @@
 #SBATCH --mail-user=zverev@in.tum.de
 #SBATCH --output=/dss/mcmlscratch/00/ge96lam3/logs/videollama2/slurm-%j.out
 #SBATCH --error=/dss/mcmlscratch/00/ge96lam3/logs/videollama2/slurm-%j.out
+#SBATCH --qos=mcml
 
 echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 echo "START TIME: $(date)"
