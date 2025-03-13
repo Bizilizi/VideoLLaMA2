@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name="VideoLLaMA-2-8gpu"
 #SBATCH --nodes=2
+#SBATCH --ntasks-per-node=1 
 #SBATCH --cpus-per-task=24
 #SBATCH --gres=gpu:4
 #SBATCH --partition=DEADLINE
@@ -11,6 +12,14 @@
 #SBATCH --output=/storage/slurm/zverev/logs/videollama2/8gpu/slurm-%j.out
 #SBATCH --error=/storage/slurm/zverev/logs/videollama2/8gpu/slurm-%j.out
 #SBATCH --nodelist=node3,node20,node19
+
+##### Number of total processes 
+echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+echo "START TIME: $(date)"
+echo "Nodelist:= " $SLURM_JOB_NODELIST
+echo "Number of nodes:= " $SLURM_JOB_NUM_NODES
+echo "Ntasks per node:= "  $SLURM_NTASKS_PER_NODE
+echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX "
 
 source activate videollama2av
 set -x
@@ -28,7 +37,7 @@ squashfuse /storage/local/zverev/vggsound.squashfs /tmp/vggsound
 cd ../..
 
 # Environment Variables
-ARG_WORLD_SIZE=${SLURM_NNODES:-${1:-1}}
+ARG_WORLD_SIZE=$(($SLURM_NNODES * $SLURM_NTASKS_PER_NODE))
 
 
 if [ "$ARG_WORLD_SIZE" -gt 1 ]; then
@@ -41,12 +50,10 @@ else
 fi
 
 ARG_MASTER_PORT=$((10000 + RANDOM % 20000))
-ARG_RANK=${SLURM_NODEID:-${3:-0}}
 
 echo "NODELIST="${SLURM_NODELIST}
 echo "ARG_MASTER_ADDR=$ARG_MASTER_ADDR"
 echo "ARG_MASTER_PORT=$ARG_MASTER_PORT"
-echo "ARG_RANK=$ARG_RANK"
 
 # Multiple conditions
 if [ ! -n "$WORLD_SIZE" ] || [ ! -n "$NPROC_PER_NODE" ]; then
@@ -56,7 +63,6 @@ fi
 if [ ! -n "$MASTER_ADDR" ] || [ ! -n "$MASTER_PORT" ] || [ ! -n "$RANK" ]; then
     MASTER_ADDR=$ARG_MASTER_ADDR
     MASTER_PORT=$ARG_MASTER_PORT
-    RANK=$ARG_RANK
 fi
 
 echo "WORLD_SIZE: $WORLD_SIZE"
@@ -74,12 +80,16 @@ RUN_NAME=siglip_tcv35_7b_16f_lora
 DATA_DIR=/tmp/vggsound/
 OUTP_DIR=work_dirs
 
-torchrun --nnodes $WORLD_SIZE \
+# same goes for `\$(hostname -s|tr -dc '0-9')` - we want it to interpolate at `srun` time
+LAUNCHER="torchrun --nnodes $WORLD_SIZE \
     --nproc_per_node $NPROC_PER_NODE \
     --master_addr=$MASTER_ADDR \
     --master_port=$MASTER_PORT \
-    --node_rank $RANK \
-    videollama2/train.py \
+    --node_rank \$SLURM_NODEID \
+    "
+
+# EDIT the path+name of the python script and whatever args it needs
+PROGRAM="videollama2/train.py \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --deepspeed scripts/zero3.json \
     --model_type videollama2_qwen2 \
@@ -113,3 +123,20 @@ torchrun --nnodes $WORLD_SIZE \
     --dataloader_num_workers 24 \
     --report_to tensorboard \
     --run_name $RUN_NAME \
+    "
+
+export CMD="$LAUNCHER $PROGRAM"
+echo $CMD
+
+# srun error handling:
+# --wait=60: wait 60 sec after the first task terminates before terminating all remaining tasks
+# --kill-on-bad-exit=1: terminate a step if any task exits with a non-zero exit code
+SRUN_ARGS=" \
+    --wait=60 \
+    --kill-on-bad-exit=1 \
+    --jobid $SLURM_JOB_ID \
+    "
+
+srun $SRUN_ARGS bash -c "$CMD"
+
+echo "END TIME: $(date)"

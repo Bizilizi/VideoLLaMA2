@@ -1,16 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name="AVSiam(AV)"
-#SBATCH --nodes=1
+#SBATCH --job-name="Video LLaMA"
+#SBATCH --nodes=2
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:4
 #SBATCH --partition=mcml-hgx-a100-80x4
 #SBATCH --comment="ICCV"
 #SBATCH --mem=24G
-#SBATCH --time=48:00:00
+#SBATCH --time=12:00:00
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=zverev@in.tum.de
-#SBATCH --output=/storage/slurm/zverev/logs/avsiam/slurm-%j.out
-#SBATCH --error=/storage/slurm/zverev/logs/avsiam/slurm-%j.out
+#SBATCH --output=/dss/mcmlscratch/00/ge96lam3/logs/videollama2/slurm-%j.out
+#SBATCH --error=/dss/mcmlscratch/00/ge96lam3/logs/videollama2/slurm-%j.out
 
 echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 echo "START TIME: $(date)"
@@ -26,10 +26,10 @@ mkdir -p /storage/local/zverev
 mkdir -p /tmp/vggsound
 
 # copy the squashfs file to the local storage
-rsync -av --progress --ignore-existing /home/wiss/zverev/datasets/vggsound.squashfs /storage/local/zverev/vggsound.squashfs
+# rsync -av --progress --ignore-existing /dss/mcmlscratch/00/ge96lam3/vggsound.squashfs /storage/local/zverev/vggsound.squashfs
 
 # mount the squashfs file
-squashfuse /storage/local/zverev/vggsound.squashfs /tmp/vggsound
+squashfuse /dss/mcmlscratch/00/ge96lam3/vggsound.squashfs /tmp/vggsound
 
 # cd to the main dir
 cd ../..
