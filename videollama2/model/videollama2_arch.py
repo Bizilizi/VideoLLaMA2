@@ -86,7 +86,7 @@ class Videollama2MetaModel:
                 is_local = False
                 pretrain_mm_mlp_adapter = pretrain_mm_mlp_adapter.replace('mm_projector.bin', '')
                 pretrain_mm_mlp_adapter = pretrain_mm_mlp_adapter.strip('/').strip('\\').strip()
-                mm_projector_weights = load_mm_projector(pretrain_mm_mlp_adapter)
+                mm_projector_weights = load_mm_projector(pretrain_mm_mlp_adapter, cache_dir="./cache")
 
             def get_w(weights, keyword):
                 return {k.split(keyword + '.')[1]: v for k, v in weights.items() if keyword in k}
