@@ -21,8 +21,8 @@ echo "Number of nodes:= " $SLURM_JOB_NUM_NODES
 echo "Ntasks per node:= "  $SLURM_NTASKS_PER_NODE
 echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX "
 
-source activate videollama2av
-set -x
+# Activate your conda environment (adjust if needed)
+source /leonardo/home/userexternal/akoepke0/local/avl/bin/activate
 
 # cd to the main dir
 cd ../../..
