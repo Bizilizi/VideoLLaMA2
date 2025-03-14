@@ -23,7 +23,7 @@ echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX "
 
 # Activate your conda environment (adjust if needed)
 source /leonardo/home/userexternal/akoepke0/local/avl/bin/activate
-
+export TRANSFORMERS_OFFLINE=1
 
 # Environment Variables
 ARG_WORLD_SIZE=$(($SLURM_NNODES * $SLURM_NTASKS_PER_NODE))
