@@ -113,6 +113,8 @@ torchrun --nnodes $WORLD_SIZE \
     --run_name $RUN_NAME \
     "
 
+echo "$CMD"
+
 # srun error handling:
 # --wait=60: wait 60 sec after the first task terminates before terminating all remaining tasks
 # --kill-on-bad-exit=1: terminate a step if any task exits with a non-zero exit code
