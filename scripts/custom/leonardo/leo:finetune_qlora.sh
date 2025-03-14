@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="jid:vla-1882js8"
+#SBATCH --job-name="jid:vla-qlr76"
 #SBATCH --nodes=2
 #SBATCH --ntasks-per-node=1 
 #SBATCH --cpus-per-task=24
@@ -67,7 +67,7 @@ GRADIENT_ACCUMULATION_STEPS=$[$GLOBAL_BATCH_SIZE/($WORLD_SIZE*$NPROC_PER_NODE*$L
 # Log Arguments
 export WANDB_PROJECT=videollama2qwen2_downstream_sft
 
-RUN_NAME=siglip_tcv35_7b_16f_lora
+RUN_NAME=siglip_tcv35_7b_16f_qlora
 DATA_DIR=/leonardo_work/EUHPC_E03_068/akoepke/vs
 OUTP_DIR=work_dirs
 
@@ -76,19 +76,19 @@ export OMP_NUM_THREADS=$(($SLURM_CPUS_PER_TASK / $NPROC_PER_NODE))
 
 torchrun --nnodes $WORLD_SIZE \
     --nproc_per_node $NPROC_PER_NODE \
-    --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT \
-    --rdzv-backend=c10d \
+    --master_addr=$MASTER_ADDR \
+    --master_port=$MASTER_PORT \
     --node_rank \$SLURM_NODEID \ 
     videollama2/train.py \
-    --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
-    --deepspeed scripts/zero3.json \
+    --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 --bits 4 \
+    --deepspeed scripts/zero2.json \
     --model_type videollama2_qwen2 \
     --model_path Qwen/Qwen2-7B-Instruct \
     --vision_tower google/siglip-so400m-patch14-384 \
     --mm_projector_type stc_connector_v35 \
     --pretrain_mm_mlp_adapter DAMO-NLP-SG/VideoLLaMA2.1-7B-16F-Base/mm_projector.bin \
-    --data_path   datasets/vggsound/vggsound_train.json \
-    --data_folder ${DATA_DIR} \
+    --data_path   ${DATA_DIR}/videollava_sft/videochatgpt_llavaimage_tune.json \
+    --data_folder ${DATA_DIR}/videollava_sft/ \
     --mm_vision_select_layer -2 \
     --image_aspect_ratio pad \
     --num_frames 16 \
@@ -110,7 +110,7 @@ torchrun --nnodes $WORLD_SIZE \
     --logging_steps 1 \
     --model_max_length 2048 \
     --gradient_checkpointing True \
-    --dataloader_num_workers 24 \
+    --dataloader_num_workers 4 \
     --report_to tensorboard \
     --run_name $RUN_NAME \
     "
