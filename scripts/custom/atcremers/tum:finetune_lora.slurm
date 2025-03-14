@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name="VideoLLaMA-2-8gpu"
-#SBATCH --nodes=2
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1 
 #SBATCH --cpus-per-task=24
 #SBATCH --gres=gpu:4
@@ -85,8 +85,9 @@ squashfuse /storage/local/zverev/vggsound.squashfs /tmp/vggsound
 torchrun --nnodes $WORLD_SIZE \
     --nproc_per_node $NPROC_PER_NODE \
     --rdzv_endpoint $MASTER_ADDR:$MASTER_PORT \
-    --rdzv-backend=c10d \
-    --node_rank \$SLURM_NODEID \ 
+    --master_addr=$MASTER_ADDR \
+    --master_port=$MASTER_PORT \
+    --node_rank \$SLURM_NODEID \
     videollama2/train.py \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --deepspeed scripts/zero3.json \

@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name="Video LLaMA"
 #SBATCH --nodes=2
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=24
 #SBATCH --gres=gpu:4
-#SBATCH --partition=mcml-hgx-a100-80x4
+#SBATCH --partition=mcml-dgx-a100-40x8
 #SBATCH --comment="ICCV"
 #SBATCH --mem=128G
 #SBATCH --time=12:00:00
