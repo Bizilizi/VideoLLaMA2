@@ -15,4 +15,3 @@ model = AutoModelForCausalLM.from_pretrained(
 tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen2-7B-Instruct", cache_dir="./cache")
 
 model_init("DAMO-NLP-SG/VideoLLaMA2.1-7B-16F-Base", cache_dir="./cache")
-model_init("DAMO-NLP-SG/VideoLLaMA2-7B-16F", cache_dir="./cache")

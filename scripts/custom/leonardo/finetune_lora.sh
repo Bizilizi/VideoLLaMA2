@@ -85,7 +85,7 @@ torchrun --nnodes $WORLD_SIZE \
     --vision_tower google/siglip-so400m-patch14-384 \
     --mm_projector_type stc_connector_v35 \
     --pretrain_mm_mlp_adapter DAMO-NLP-SG/VideoLLaMA2.1-7B-16F-Base/mm_projector.bin \
-    --data_path   datasets/vggsound/vggsound_train.json \
+    --data_path   datasets/vggsound/vggsound_test.json \
     --data_folder ${DATA_DIR} \
     --mm_vision_select_layer -2 \
     --image_aspect_ratio pad \
