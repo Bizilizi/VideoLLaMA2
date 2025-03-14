@@ -22,7 +22,7 @@ echo "Ntasks per node:= "  $SLURM_NTASKS_PER_NODE
 echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX "
 
 # Activate your conda environment (adjust if needed)
-source /leonardo/home/userexternal/akoepke0/local/avl/bin/activate
+source /leonardo/home/userexternal/akoepke0/avlnwe/bin/activate
 export TRANSFORMERS_OFFLINE=1
 
 # Environment Variables
