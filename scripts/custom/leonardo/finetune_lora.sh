@@ -76,7 +76,7 @@ torchrun --nnodes $WORLD_SIZE \
     --nproc_per_node $NPROC_PER_NODE \
     --master_addr=$MASTER_ADDR \
     --master_port=$MASTER_PORT \
-    --node_rank \$SLURM_NODEID \ 
+    --node_rank \$SLURM_NODEID \
     videollama2/train.py \
     --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
     --deepspeed scripts/zero3.json \

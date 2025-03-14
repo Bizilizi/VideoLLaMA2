@@ -75,7 +75,7 @@ torchrun --nnodes $WORLD_SIZE \
     --nproc_per_node $NPROC_PER_NODE \
     --master_addr=$MASTER_ADDR \
     --master_port=$MASTER_PORT \
-    --node_rank \$SLURM_NODEID \ 
+    --node_rank \$SLURM_NODEID \
     videollama2/train.py \
     --deepspeed scripts/zero3.json \
     --model_type videollama2_qwen2 \
