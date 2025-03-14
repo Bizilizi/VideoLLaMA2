@@ -42,7 +42,7 @@ from videollama2.videollama2_trainer import (VideoLLaMA2Trainer,
     get_peft_state_maybe_zero_3, get_peft_state_non_lora_maybe_zero_3, 
     find_all_linear_names, safe_save_model_for_hf_trainer
 )
-
+import shutup; shutup.please()
 
 # NOTE: fast tokenizer warning issue: https://github.com/huggingface/transformers/issues/5486   
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
