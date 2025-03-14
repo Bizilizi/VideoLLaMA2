@@ -1,0 +1,40 @@
+#!/bin/bash
+torchrun --nnodes $WORLD_SIZE \
+    --nproc_per_node $NPROC_PER_NODE \
+    --master_addr=$MASTER_ADDR \
+    --master_port=$MASTER_PORT \
+    --node_rank $SLURM_NODEID \
+    videollama2/train.py \
+    --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
+    --deepspeed scripts/zero3.json \
+    --model_type videollama2_qwen2 \
+    --model_path Qwen/Qwen2-7B-Instruct \
+    --vision_tower google/siglip-so400m-patch14-384 \
+    --mm_projector_type stc_connector_v35 \
+    --pretrain_mm_mlp_adapter DAMO-NLP-SG/VideoLLaMA2.1-7B-16F-Base/mm_projector.bin \
+    --data_path   datasets/vggsound/vggsound_train.json \
+    --data_folder ${DATA_DIR} \
+    --mm_vision_select_layer -2 \
+    --image_aspect_ratio pad \
+    --num_frames 16 \
+    --bf16 True \
+    --tf32 True \
+    --fp16 False \
+    --output_dir ${OUTP_DIR}/${WANDB_PROJECT}/finetune_${RUN_NAME} \
+    --num_train_epochs 1 \
+    --per_device_train_batch_size $LOCAL_BATCH_SIZE \
+    --per_device_eval_batch_size 4 \
+    --gradient_accumulation_steps $GRADIENT_ACCUMULATION_STEPS \
+    --save_strategy "steps" \
+    --save_steps 500 \
+    --save_total_limit 99 \
+    --learning_rate 2e-5 \
+    --weight_decay 0. \
+    --warmup_ratio 0.03 \
+    --lr_scheduler_type "cosine" \
+    --logging_steps 1 \
+    --model_max_length 2048 \
+    --gradient_checkpointing True \
+    --dataloader_num_workers 24 \
+    --report_to tensorboard \
+    --run_name $RUN_NAME \

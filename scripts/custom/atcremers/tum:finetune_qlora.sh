@@ -1,18 +1,19 @@
 #!/bin/bash
-#SBATCH --job-name="Video LLaMA"
+#SBATCH --job-name="VideoLLaMA-2-8gpu"
 #SBATCH --nodes=2
-#SBATCH --cpus-per-task=8
-#SBATCH --gres=gpu:2
-#SBATCH --partition=mcml-hgx-a100-80x4
-#SBATCH --comment="ICCV"
+#SBATCH --ntasks-per-node=1 
+#SBATCH --cpus-per-task=24
+#SBATCH --gres=gpu:4
+#SBATCH --partition=DEADLINE
+#SBATCH --comment="ICCV Rebuttal"
 #SBATCH --mem=128G
-#SBATCH --time=12:00:00
+#SBATCH --time=10:00:00
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=zverev@in.tum.de
-#SBATCH --output=/dss/mcmlscratch/00/ge96lam3/logs/videollama2/slurm-%j.out
-#SBATCH --error=/dss/mcmlscratch/00/ge96lam3/logs/videollama2/slurm-%j.out
-#SBATCH --qos=mcml
+#SBATCH --output=/storage/slurm/zverev/logs/videollama2/8gpu/slurm-%j.out
+#SBATCH --error=/storage/slurm/zverev/logs/videollama2/8gpu/slurm-%j.out
+#SBATCH --nodelist=node20,node19
 
+##### Number of total processes 
 echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 echo "START TIME: $(date)"
 echo "Nodelist:= " $SLURM_JOB_NODELIST
@@ -23,11 +24,8 @@ echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX "
 source activate videollama2av
 set -x
 
-# copy the squashfs file to the local storage
-# rsync -av --progress --ignore-existing /dss/mcmlscratch/00/ge96lam3/vggsound.squashfs /storage/local/zverev/vggsound.squashfs
-
 # cd to the main dir
-cd ../..
+cd ../../..
 
 # Environment Variables
 ARG_WORLD_SIZE=$(($SLURM_NNODES * $SLURM_NTASKS_PER_NODE))
@@ -69,33 +67,36 @@ GRADIENT_ACCUMULATION_STEPS=$[$GLOBAL_BATCH_SIZE/($WORLD_SIZE*$NPROC_PER_NODE*$L
 # Log Arguments
 export WANDB_PROJECT=videollama2qwen2_downstream_sft
 
-RUN_NAME=siglip_tcv35_7b_16f_lora
-DATA_DIR=/tmp/vggsound/
+RUN_NAME=siglip_tcv35_7b_16f_qlora
+DATA_DIR=datasets
 OUTP_DIR=work_dirs
 
-# same goes for `\$(hostname -s|tr -dc '0-9')` - we want it to interpolate at `srun` time
 CMD="
+export OMP_NUM_THREADS=$(($SLURM_CPUS_PER_TASK / $NPROC_PER_NODE))
 mkdir -p /storage/local/zverev
 mkdir -p /tmp/vggsound
 
+# copy the squashfs file to the local storage
+rsync -av --progress --ignore-existing /home/wiss/zverev/datasets/vggsound.squashfs /storage/local/zverev/vggsound.squashfs
+
 # mount the squashfs file
-squashfuse /dss/mcmlscratch/00/ge96lam3/vggsound.squashfs /tmp/vggsound
+squashfuse /storage/local/zverev/vggsound.squashfs /tmp/vggsound
 
 torchrun --nnodes $WORLD_SIZE \
     --nproc_per_node $NPROC_PER_NODE \
     --master_addr=$MASTER_ADDR \
     --master_port=$MASTER_PORT \
-    --node_rank \$SLURM_NODEID \
+    --node_rank $RANK \
     videollama2/train.py \
-    --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 \
-    --deepspeed scripts/zero3.json \
+    --lora_enable True --lora_r 128 --lora_alpha 256 --mm_projector_lr 2e-5 --bits 4 \
+    --deepspeed scripts/zero2.json \
     --model_type videollama2_qwen2 \
     --model_path Qwen/Qwen2-7B-Instruct \
     --vision_tower google/siglip-so400m-patch14-384 \
     --mm_projector_type stc_connector_v35 \
     --pretrain_mm_mlp_adapter DAMO-NLP-SG/VideoLLaMA2.1-7B-16F-Base/mm_projector.bin \
-    --data_path   datasets/vggsound/vggsound_train.json \
-    --data_folder ${DATA_DIR} \
+    --data_path   ${DATA_DIR}/videollava_sft/videochatgpt_llavaimage_tune.json \
+    --data_folder ${DATA_DIR}/videollava_sft/ \
     --mm_vision_select_layer -2 \
     --image_aspect_ratio pad \
     --num_frames 16 \
@@ -117,7 +118,7 @@ torchrun --nnodes $WORLD_SIZE \
     --logging_steps 1 \
     --model_max_length 2048 \
     --gradient_checkpointing True \
-    --dataloader_num_workers 24 \
+    --dataloader_num_workers 4 \
     --report_to tensorboard \
     --run_name $RUN_NAME \
     "
